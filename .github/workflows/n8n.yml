@@ -2,21 +2,20 @@ name: n8n Cloud Server
 
 on:
   push:
-    branches:
-      - main      # change if your branch name is different
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   n8n:
     runs-on: ubuntu-latest
-    timeout-minutes: 360   # 6 hours max runtime
+    timeout-minutes: 360
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # Use Node 20 (required for latest n8n)
-      - name: Setup Node 20
+      # Node 20 required by n8n
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -27,39 +26,28 @@ jobs:
           wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
 
-      # Start n8n temporary (local)
-      - name: Start n8n temporary
-        run: |
-          export N8N_PORT=5678
-          export N8N_HOST=0.0.0.0
-          export N8N_PROTOCOL=http
-          export N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
-
-          npx --yes -p n8n n8n start &
-          sleep 40
-
-      # Create public URL
+      # Start tunnel FIRST
       - name: Create Public URL
         run: |
           cloudflared tunnel --url http://localhost:5678 > tunnel.log 2>&1 &
-          sleep 15
+          sleep 20
 
           URL=$(grep -o 'https://[-a-z0-9]*\.trycloudflare.com' tunnel.log | head -n 1)
 
-          echo "PUBLIC_URL=$URL" >> $GITHUB_ENV
-          echo "==============================="
-          echo "Your Public URL:"
-          echo "$URL"
-          echo "==============================="
+          if [ -z "$URL" ]; then
+            echo "Tunnel failed"
+            cat tunnel.log
+            exit 1
+          fi
 
-      # Restart n8n with webhook URL
-      - name: Restart n8n with webhook url
+          echo "PUBLIC_URL=$URL" >> $GITHUB_ENV
+          echo "Public URL: $URL"
+
+      # Start n8n ONLY ONCE with webhook url
+      - name: Start n8n server
         env:
           PUBLIC_URL: ${{ env.PUBLIC_URL }}
         run: |
-          pkill node || true
-          sleep 5
-
           export N8N_PORT=5678
           export N8N_HOST=0.0.0.0
           export N8N_PROTOCOL=http
@@ -67,14 +55,17 @@ jobs:
           export GENERIC_TIMEZONE=Asia/Kolkata
           export N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
 
+          echo "Starting n8n..."
           npx --yes -p n8n n8n start &
-          sleep 40
 
-      # Keep server alive ~6 hours
+          echo "Waiting for n8n..."
+          sleep 60
+
+      # Show URL + keep alive
       - name: Keep Alive
         run: |
-          echo "==============================="
-          echo "Your n8n URL:"
+          echo "================================="
+          echo "OPEN YOUR n8n HERE:"
           echo $PUBLIC_URL
-          echo "==============================="
+          echo "================================="
           sleep 21600
