@@ -1,0 +1,74 @@
+name: n8n Server (Cloudflare Tunnel 6hr)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-n8n:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install n8n
+        run: npm install -g n8n
+
+      - name: Install Cloudflare Tunnel
+        run: |
+          wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+
+      # Start n8n first
+      - name: Start n8n (temporary)
+        run: |
+          export N8N_PORT=5678
+          export N8N_HOST=0.0.0.0
+          export N8N_PROTOCOL=http
+          n8n start &
+          sleep 20
+
+      # Create public URL using cloudflare quick tunnel
+      - name: Start Cloudflare tunnel
+        run: |
+          cloudflared tunnel --url http://localhost:5678 > tunnel.log 2>&1 &
+          sleep 15
+
+          PUBLIC_URL=$(grep -o 'https://[-a-z0-9]*\.trycloudflare.com' tunnel.log | head -n 1)
+
+          echo "PUBLIC_URL=$PUBLIC_URL" >> $GITHUB_ENV
+          echo "Public URL: $PUBLIC_URL"
+
+      # Restart n8n with webhook url
+      - name: Restart n8n with WEBHOOK_URL
+        run: |
+          pkill node || true
+          sleep 5
+
+          export N8N_PORT=5678
+          export N8N_HOST=0.0.0.0
+          export N8N_PROTOCOL=http
+          export WEBHOOK_URL=${{ env.PUBLIC_URL }}
+          export GENERIC_TIMEZONE=Asia/Kolkata
+
+          echo "WEBHOOK_URL=$WEBHOOK_URL"
+
+          n8n start &
+          sleep 20
+
+      - name: Show access URL
+        run: |
+          echo "==============================="
+          echo "Your n8n URL:"
+          echo "${{ env.PUBLIC_URL }}"
+          echo "==============================="
+          echo "Server will run 6 hours."
+
+      - name: Keep alive 6 hours
+        run: sleep 21600
