@@ -9,32 +9,31 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install Node.js
+      # ✅ Use Node 20 (required by n8n)
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
-
-      - name: Install n8n
-        run: npm install -g n8n
+          node-version: 20
 
       - name: Install Cloudflare Tunnel
         run: |
           wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
 
-      # Start n8n first
+      # Start n8n temporarily
       - name: Start n8n (temporary)
         run: |
           export N8N_PORT=5678
           export N8N_HOST=0.0.0.0
           export N8N_PROTOCOL=http
-          n8n start &
-          sleep 20
+          export N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
 
-      # Create public URL using cloudflare quick tunnel
+          npx n8n start &
+          sleep 30
+
+      # Create public URL
       - name: Start Cloudflare tunnel
         run: |
           cloudflared tunnel --url http://localhost:5678 > tunnel.log 2>&1 &
@@ -56,19 +55,20 @@ jobs:
           export N8N_PROTOCOL=http
           export WEBHOOK_URL=${{ env.PUBLIC_URL }}
           export GENERIC_TIMEZONE=Asia/Kolkata
+          export N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
 
           echo "WEBHOOK_URL=$WEBHOOK_URL"
 
-          n8n start &
-          sleep 20
+          npx n8n start &
+          sleep 30
 
-      - name: Show access URL
+      - name: Show Access URL
         run: |
-          echo "==============================="
+          echo "=================================="
           echo "Your n8n URL:"
           echo "${{ env.PUBLIC_URL }}"
-          echo "==============================="
-          echo "Server will run 6 hours."
+          echo "=================================="
+          echo "Server running 6 hours..."
 
-      - name: Keep alive 6 hours
+      - name: Keep Alive
         run: sleep 21600
