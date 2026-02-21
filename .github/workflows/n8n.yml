@@ -1,6 +1,9 @@
 name: n8n Cloud Server
 
 on:
+  push:
+    branches:
+      - main      # change if your branch name is different
   workflow_dispatch:
 
 jobs:
@@ -12,19 +15,19 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # ✅ Use Node 20 (required for latest n8n)
+      # Use Node 20 (required for latest n8n)
       - name: Setup Node 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # ✅ Install Cloudflare tunnel
+      # Install Cloudflare tunnel
       - name: Install Cloudflare Tunnel
         run: |
           wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
 
-      # ✅ Start n8n temporary (local)
+      # Start n8n temporary (local)
       - name: Start n8n temporary
         run: |
           export N8N_PORT=5678
@@ -35,7 +38,7 @@ jobs:
           npx --yes -p n8n n8n start &
           sleep 40
 
-      # ✅ Start public tunnel
+      # Create public URL
       - name: Create Public URL
         run: |
           cloudflared tunnel --url http://localhost:5678 > tunnel.log 2>&1 &
@@ -49,7 +52,7 @@ jobs:
           echo "$URL"
           echo "==============================="
 
-      # ✅ Restart n8n with webhook URL
+      # Restart n8n with webhook URL
       - name: Restart n8n with webhook url
         env:
           PUBLIC_URL: ${{ env.PUBLIC_URL }}
@@ -67,7 +70,7 @@ jobs:
           npx --yes -p n8n n8n start &
           sleep 40
 
-      # ✅ Keep server alive ~6 hours
+      # Keep server alive ~6 hours
       - name: Keep Alive
         run: |
           echo "==============================="
