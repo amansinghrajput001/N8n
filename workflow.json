@@ -1,0 +1,81 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $binary.data.fileName }}",
+        "regionCode": "IN",
+        "categoryId": "20",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        272,
+        32
+      ],
+      "id": "95329a37-7ce2-4632-a84e-87df10e78f80",
+      "name": "Upload a video",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "SfCyi9n39VvvkPEo",
+          "name": "YouTube account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "https://drive.google.com/file/d/1sBoNq0cwyWZFlCEym_AXyaChWCexHB7t/view?usp=drive_link",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -32,
+        -80
+      ],
+      "id": "9be0ffcf-669d-4215-b1ba-ef6fc3ac4c96",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "SShnsvimbcI3q2Cr",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Upload a video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "1269671f-f2a4-441e-9ad3-97ffd072f774",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "94f9f2b348319092e9be1456bb101c280a9e369cd65669b113a0a737c6c45163"
+  },
+  "id": "tJF3NWOnCK605PAq",
+  "tags": []
+}
